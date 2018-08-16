@@ -1,6 +1,6 @@
 <?php
 /* Author : Bruno Drago
- * Gets the list of Release tickets from Jira on "TPM SignoffNeeded" status
+ * Gets the list of Release tickets from Jira on "Release Approval Needed" status
  * For each release ticket:
  *   - Checks for Hotfix Flag (not sure what to do with that yet)
  *   - Checks if PR/hash exists
@@ -35,7 +35,7 @@ foreach ($Releases->issues as $r) {
 	$JiraSmartCommits=array();
 	$PRCommits=array();
         $commitMsgs=array();
-
+	$squeekyClean=true;
 	$msg.= "*".$r->fields->summary."* ";
 	$msg.= "https://doorbot.atlassian.net/browse/".$r->key;
 	
@@ -56,6 +56,7 @@ foreach ($Releases->issues as $r) {
 
 	if (count($hashes[0]) < 1) {
 		$msg.= "\n\t`Hash Missing.`";	
+		$squeekyClean=false;
 		//break;
 	}
 
@@ -70,6 +71,7 @@ foreach ($Releases->issues as $r) {
 	
 	if (count($prs[0]) < 1) {
 		$msg.= "\n\t\t`Pull Request Missing.`";
+		$squeekyClean=false;
 		//break;
 	}
 	foreach ($prs[0] as $pr) {
@@ -106,6 +108,7 @@ foreach ($Releases->issues as $r) {
 		} else {
 			if ($prHash && end($thisPRCommits) != $prHash) {
 				$msg .="\n\t\t".$pr."` last Commit is not ".$prHash."`";
+				$squeekyClean=false;
 			}
 		}
 		$PRCommits = array_merge($PRCommits, $thisPRCommits); 
@@ -114,6 +117,7 @@ foreach ($Releases->issues as $r) {
 		$Json = CurlGitHub($url."/reviews");
 		if (count($Json) < 2) {
 			$msg .="\n\t\t".$pr." `has less than 2 approvals`";
+			$squeekyClean=false;
 		}
 		foreach ($Json as $rw) {
 			if ($rw->state != "APPROVED") {
@@ -127,23 +131,29 @@ foreach ($Releases->issues as $r) {
 	$fixVersion = $r->fields->fixVersions[0]->name?$r->fields->fixVersions[0]->name:null;
 	if ($fixVersion === null) { 
 		$msg.= "\n\t\t`FixVersion Missing.`";
+		$squeekyClean=false;
 		//break;
 	}	
 
 	//$msg.= "\n\n\t*FixVersion:*\t".$fixVersion;
 	//$msg.= "\n\n\t*Security Tasks:*";
 
-	if (count($r->fields->subtasks) < 1) {
-		$msg.= "\t`No security tasks found.`";
-		//break;
-	} else {
+	$securitySubtasks=0;
+	if (count($r->fields->subtasks) > 0) {
 		foreach ($r->fields->subtasks as $subtask) {
 			if ($subtask->fields->status->name != "Closed") {		
 				$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
 			}
+			if (trim($subtask->fields->summary) == trim("Get Security Sign Off - ".$r->fields->summary)) {
+				$securitySubtasks++;
+			}
+			
 		}
 	}
-
+	if ($securitySubtasks < 1) {
+		$msg.= "\n\t\t`No security tasks found.`";
+		$squeekyClean=false;
+	}
 	//$msg.= "\n\n\t*Tickets:*";
 	
 	$jql = "project=".$r->fields->project->key." and fixVersion=\"".$fixVersion."\" and id !=".$r->id;
@@ -152,6 +162,7 @@ foreach ($Releases->issues as $r) {
 	$Issues = Json_decode(CurlJira($request));
 	if (count($Issues->issues) == 0) {
 		$msg.= "\n\t\t`No issues associated with the release.`";
+		$squeekyClean=false;
 	} else {
 		foreach ($Issues->issues as $i) {
 
@@ -204,45 +215,50 @@ foreach ($Releases->issues as $r) {
 
 	$diff = array_diff($PRCommits,$JiraSmartCommits);
 	if (count($diff)> 0) {
+		$squeekyClean=false;
 		$msg.= "\n\n\t\t*Commits existing on PR but not in Jira:*\n";
 		foreach ($diff as $c) {
 			$msg.= "\t\t`".$c."` ".$commitMsgs[$c]."\n";
 		}
 	}
 
-	$msg.= "\n\n";
-}
-
-if ($msg!="") {
-
-        $url = "https://hooks.slack.com/services/".$conf['SLACK'];
-        $ch = curl_init();
-        $headers = array(
-            'Accept: application/json',
-            'Content-Type: application/json'
-        );
-
-        $data = '{"text":'.json_encode($msg).'}';
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_VERBOSE, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_URL, $url);
-        $result = curl_exec($ch);
-        $ch_error = curl_error($ch);
-
-        if ($ch_error) {
-            echo "cURL Error: $ch_error";
-        } else {
-            return $result;
-        }
-        curl_close($ch);
 
 
+	if($msg!="" && $squeekyClean) {
+		$msg.="\t:white_check_mark:";
+	}
+
+	if ($msg!="") {
+	
+	        $url = "https://hooks.slack.com/services/".$conf['SLACK'];
+	        $ch = curl_init();
+	        $headers = array(
+	            'Accept: application/json',
+	            'Content-Type: application/json'
+	        );
+	
+	        $data = '{"text":'.json_encode($msg).'}';
+	
+	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	        curl_setopt($ch, CURLOPT_VERBOSE, 0);
+	        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+	        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+	        curl_setopt($ch, CURLOPT_URL, $url);
+	        $result = curl_exec($ch);
+	        $ch_error = curl_error($ch);
+	
+	        if ($ch_error) {
+	            echo "cURL Error: $ch_error";
+	        } else {
+	            return $result;
+	        }
+	        curl_close($ch);
+	
+	
+	}
 
 }
 
