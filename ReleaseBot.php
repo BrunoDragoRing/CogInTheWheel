@@ -30,8 +30,8 @@ $request = "rest/api/2/search?jql=".urlencode($jql);
 
 $Releases = Json_decode(CurlJira($request));
 
-$msg = "";
 foreach ($Releases->issues as $r) {
+	$msg = "";
 	$JiraSmartCommits=array();
 	$PRCommits=array();
         $commitMsgs=array();
@@ -85,7 +85,7 @@ foreach ($Releases->issues as $r) {
 		for ($i=0; $i < count($urlpieces); $i++) {
 	 		if ($urlpieces[$i] == 'pull') { 
 				$url .= "pulls/".$urlpieces[++$i];
-				break;
+				//break;
 			} else {
 				$url .= $urlpieces[$i]."/";
 			}
@@ -93,13 +93,15 @@ foreach ($Releases->issues as $r) {
 		$Json = CurlGitHub($url."/commits");
 
 			//echo "\n";
-		foreach ($Json as $c) {
-			$hash = substr($c->sha,0,7);
-			$thisPRCommits[] = $hash;
-			$commitMsgs[$hash]=str_replace("\n","",substr($c->commit->message,0,100));
-			//echo "\t".$hash;
-			if (in_array($hash,$displayHashes)) {	
-				$prHash = $hash;
+		if (is_array($Json) && count($Json)>0) {
+			foreach ($Json as $c) {
+				$hash = substr($c->sha,0,7);
+				$thisPRCommits[] = $hash;
+				$commitMsgs[$hash]=str_replace("\n","",substr($c->commit->message,0,100));
+				//echo "\t".$hash;
+				if (in_array($hash,$displayHashes)) {	
+					$prHash = $hash;
+				}
 			}
 		}
 
@@ -115,13 +117,15 @@ foreach ($Releases->issues as $r) {
 
 
 		$Json = CurlGitHub($url."/reviews");
-		if (count($Json) < 2) {
-			$msg .="\n\t\t".$pr." `has less than 2 approvals`";
-			$squeekyClean=false;
-		}
-		foreach ($Json as $rw) {
-			if ($rw->state != "APPROVED") {
-				$msg .="\n\t\t".$pr." `".$rw->state."`";
+		if (is_array($Json) && count($Json)>0) {
+			if (count($Json) < 2) {
+				$msg .="\n\t\t".$pr." `has less than 2 approvals`";
+				$squeekyClean=false;
+			}
+			foreach ($Json as $rw) {
+				if ($rw->state != "APPROVED") {
+					$msg .="\n\t\t".$pr." `".$rw->state."`";
+				}
 			}
 		}
 
@@ -237,7 +241,7 @@ foreach ($Releases->issues as $r) {
 	            'Content-Type: application/json'
 	        );
 	
-	        $data = '{"text":'.json_encode($msg).'}';
+	        $dt = '{"text":'.json_encode($msg).'}';
 	
 	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	        curl_setopt($ch, CURLOPT_VERBOSE, 0);
@@ -245,20 +249,18 @@ foreach ($Releases->issues as $r) {
 	        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 	        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 	        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-	        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+	        curl_setopt($ch, CURLOPT_POSTFIELDS, $dt);
 	        curl_setopt($ch, CURLOPT_URL, $url);
 	        $result = curl_exec($ch);
 	        $ch_error = curl_error($ch);
 	
 	        if ($ch_error) {
 	            echo "cURL Error: $ch_error";
-	        } else {
-	            return $result;
 	        }
 	        curl_close($ch);
 	
-	
 	}
+
 
 }
 
