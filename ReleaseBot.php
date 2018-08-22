@@ -179,10 +179,9 @@ foreach ($Releases->issues as $r) {
 			$request = "rest/dev-status/1.0/issue/detail?issueId=".$i->id."&applicationType=github&dataType=repository";
 			$Json = Json_decode(CurlJira($request));
 
-			$Commits = $Json->detail[0]->repositories[0]->commits;
-			if(count($Commits) > 0) {
+			if(isset($Json->detail[0]->repositories[0]->commits)) {
 				//$msg.= "\n\t\t*Jira Commits:*\t";
-				foreach ($Commits as $c) {
+				foreach ($Json->detail[0]->repositories[0]->commits as $c) {
 					$JiraSmartCommits[] = $c->displayId; 
 					//$msg.= " `".$c->displayId."`";
 				}	
