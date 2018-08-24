@@ -148,7 +148,7 @@ foreach ($Releases->issues as $r) {
 			if ($subtask->fields->status->name != "Closed") {		
 				$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
 			}
-			if (trim($subtask->fields->summary) == trim("Get Security Sign Off - ".$r->fields->summary)) {
+			if (trim(substr($subtask->fields->summary,0,22)) == "Get Security Sign Off") {
 				$securitySubtasks++;
 			}
 			
