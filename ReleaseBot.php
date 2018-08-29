@@ -9,7 +9,7 @@
  *   - For each jira issue:
  *      + Checks for ticket status "Releasable"
  *      + Gets the list of existing commits adds to a list of commits existing in jira
- *   - Compares the list of commits from jira with the list from github 
+ *   - Compares the list of commits from jira with the list from github
  *   - Checks if security ticket exists and if it is closed
  *   - Checks for blocker tickets
  *   TODO:
