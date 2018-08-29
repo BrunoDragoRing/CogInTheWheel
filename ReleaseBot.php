@@ -34,8 +34,8 @@ foreach ($Releases->issues as $r) {
 	$msg = "";
 	$JiraSmartCommits=array();
 	$PRCommits=array();
-        $commitMsgs=array();
-	$squeekyClean=true;
+	$commitMsgs=array();
+	$squeakyClean=true;
 	$msg.= "*".$r->fields->summary."* ";
 	$msg.= "https://doorbot.atlassian.net/browse/".$r->key;
 	
@@ -56,7 +56,7 @@ foreach ($Releases->issues as $r) {
 
 	if (count($hashes[0]) < 1) {
 		$msg.= "\n\t`Hash Missing.`";	
-		$squeekyClean=false;
+		$squeakyClean=false;
 		//break;
 	}
 
@@ -71,7 +71,7 @@ foreach ($Releases->issues as $r) {
 	
 	if (count($prs[0]) < 1) {
 		$msg.= "\n\t\t`Pull Request Missing.`";
-		$squeekyClean=false;
+		$squeakyClean=false;
 		//break;
 	}
 	foreach ($prs[0] as $pr) {
@@ -110,7 +110,7 @@ foreach ($Releases->issues as $r) {
 		} else {
 			if ($prHash && end($thisPRCommits) != $prHash) {
 				$msg .="\n\t\t".$pr."` last Commit is not ".$prHash."`";
-				$squeekyClean=false;
+				$squeakyClean=false;
 			}
 		}
 		$PRCommits = array_merge($PRCommits, $thisPRCommits); 
@@ -120,7 +120,7 @@ foreach ($Releases->issues as $r) {
 		if (is_array($Json) && count($Json)>0) {
 			if (count($Json) < 2) {
 				$msg .="\n\t\t".$pr." `has less than 2 approvals`";
-				$squeekyClean=false;
+				$squeakyClean=false;
 			}
 			foreach ($Json as $rw) {
 				if ($rw->state != "APPROVED") {
@@ -135,7 +135,7 @@ foreach ($Releases->issues as $r) {
 	$fixVersion = $r->fields->fixVersions[0]->name?$r->fields->fixVersions[0]->name:null;
 	if ($fixVersion === null) { 
 		$msg.= "\n\t\t`FixVersion Missing.`";
-		$squeekyClean=false;
+		$squeakyClean=false;
 		//break;
 	}	
 
@@ -147,6 +147,7 @@ foreach ($Releases->issues as $r) {
 		foreach ($r->fields->subtasks as $subtask) {
 			if ($subtask->fields->status->name != "Closed") {		
 				$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
+				$squeakyClean=false;
 			}
 			if (trim(substr($subtask->fields->summary,0,22)) == "Get Security Sign Off") {
 				$securitySubtasks++;
@@ -156,7 +157,7 @@ foreach ($Releases->issues as $r) {
 	}
 	if ($securitySubtasks < 1) {
 		$msg.= "\n\t\t`No security tasks found.`";
-		$squeekyClean=false;
+		$squeakyClean=false;
 	}
 	//$msg.= "\n\n\t*Tickets:*";
 	
@@ -166,7 +167,7 @@ foreach ($Releases->issues as $r) {
 	$Issues = Json_decode(CurlJira($request));
 	if (count($Issues->issues) == 0) {
 		$msg.= "\n\t\t`No issues associated with the release.`";
-		$squeekyClean=false;
+		$squeakyClean=false;
 	} else {
 		foreach ($Issues->issues as $i) {
 
@@ -186,7 +187,7 @@ foreach ($Releases->issues as $r) {
 					//$msg.= " `".$c->displayId."`";
 				}	
 			}
-/*
+
 			$request = "rest/dev-status/1.0/issue/detail?issueId=".$i->id."&applicationType=github&dataType=pullrequest";
 			$Json = Json_decode(CurlJira($request));
 
@@ -203,7 +204,7 @@ foreach ($Releases->issues as $r) {
 
 				}	
 			}	
-*/		
+		
 		}
 	}
 
@@ -218,7 +219,7 @@ foreach ($Releases->issues as $r) {
 
 	$diff = array_diff($PRCommits,$JiraSmartCommits);
 	if (count($diff)> 0) {
-		$squeekyClean=false;
+		$squeakyClean=false;
 		$msg.= "\n\n\t\t*Commits existing on PR but not in Jira:*\n";
 		foreach ($diff as $c) {
 			$msg.= "\t\t`".$c."` ".$commitMsgs[$c]."\n";
@@ -227,7 +228,7 @@ foreach ($Releases->issues as $r) {
 
 
 
-	if($msg!="" && $squeekyClean) {
+	if($msg!="" && $squeakyClean) {
 		$msg.="\t:white_check_mark:";
 	}
 
