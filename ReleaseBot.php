@@ -349,5 +349,4 @@ function CurlGitHub($pull_request) {
 	curl_close($ch);
 
 }
- 
 ?>
