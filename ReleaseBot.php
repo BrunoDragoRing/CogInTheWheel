@@ -5,7 +5,7 @@
  *   - Checks for Hotfix Flag (not sure what to do with that yet)
  *   - Checks if PR/hash exists
  *   - Curls github and gets the list of commit hashes existing on PR
- *   - Checks if PR has at least 2 approvals and if any review is not approved 
+ *   - Checks if PR has at least 2 approvals and if any review is not approved
  *   - For each jira issue:
  *      + Checks for ticket status "Releasable"
  *      + Gets the list of existing commits adds to a list of commits existing in jira
