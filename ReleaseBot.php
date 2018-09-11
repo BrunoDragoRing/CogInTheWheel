@@ -21,7 +21,7 @@ ini_set('memory_limit', '1024M');
 
 include "conf.php";
 
-$jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
+$jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' and updated >= -16m ORDER BY created ASC";
 
 if($argc > 1) {
 	$jql = "id=".$argv[1];
