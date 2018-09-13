@@ -21,7 +21,7 @@ ini_set('memory_limit', '1024M');
 
 include "conf.php";
 
-$jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' and updated >= -16m ORDER BY created ASC";
+$jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
 
 if($argc > 1) {
 	$jql = "id=".$argv[1];
@@ -175,6 +175,7 @@ foreach ($Releases->issues as $r) {
 			//$msg.= "\n\t\t[".$i->key."]";
 			if ( $status != "14601" && $status != "6" && $status != "5") {
 				$msg.= " \n\t\t`[".$i->key."]` Not in RELEASABLE|RESOLVED|CLOSED status";
+				$squeakyClean=false;
 			}
 
 			$request = "rest/dev-status/1.0/issue/detail?issueId=".$i->id."&applicationType=github&dataType=repository";
