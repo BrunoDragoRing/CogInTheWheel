@@ -173,8 +173,8 @@ foreach ($Releases->issues as $r) {
 
 			$status = $i->fields->status->id;
 			//$msg.= "\n\t\t[".$i->key."]";
-			if ( $status != "14601" && $status != "6" && $status != "5") {
-				$msg.= " \n\t\t`[".$i->key."]` Not in RELEASABLE|RESOLVED|CLOSED status";
+			if ( $status != "14601" && $status != "6" && $status != "5" && $status != "10000") {
+				$msg.= " \n\t\t`[".$i->key."]` Not in RELEASABLE|RESOLVED|DONE|CLOSED status";
 				$squeakyClean=false;
 			}
 
