@@ -162,7 +162,7 @@ foreach ($Releases->issues as $r) {
 	//$msg.= "\n\n\t*Tickets:*";
 	
 	$jql = "project=".$r->fields->project->key." and fixVersion=\"".$fixVersion."\" and id !=".$r->id;
-	$request = "rest/api/2/search?jql=".urlencode($jql);
+	$request = "rest/api/2/search?jql=".urlencode($jql)."&maxResults=500";
 
 	$Issues = Json_decode(CurlJira($request));
 	if (count($Issues->issues) == 0) {
