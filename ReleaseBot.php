@@ -238,9 +238,18 @@ foreach ($Releases->issues as $r) {
 
 	if ($msg!="") {
 			$slack = false;
-			$stored = apc_fetch($r->key);
+			$stored = false;
+			$filename = "/tmp/".$r->key;
+			if(is_file($filename)){
+				$handle = fopen($filename, "r");
+				$stored = fread($handle, filesize($filename));
+				fclose($handle);
+			}
+
 			if (!$stored || $stored != $msg) {
-				apc_store($r->key, $msg, 60*60*24);
+				$handle = fopen($filename, "w+");
+				fwrite($handle, $msg);
+				fclose($handle);
 				$slack = true;
 			}
 
