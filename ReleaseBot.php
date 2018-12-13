@@ -28,7 +28,10 @@ if($argc > 1) {
 }
 $request = "rest/api/2/search?jql=".urlencode($jql);
 
+
+
 $Releases = Json_decode(CurlJira($request));
+
 
 foreach ($Releases->issues as $r) {
 	$msg = "";
@@ -234,39 +237,46 @@ foreach ($Releases->issues as $r) {
 	}
 
 	if ($msg!="") {
+			$slack = false;
+			$stored = apc_fetch($r->key);
+			if (!$stored || $stored != $msg) {
+				apc_store($r->key, $msg, 60*60*24);
+				$slack = true;
+			}
+
+			if ($slack) {
+	        	$url = "https://hooks.slack.com/services/".$conf['SLACK'];
+	        	$ch = curl_init();
+	        	$headers = array(
+	        	    'Accept: application/json',
+	        	    'Content-Type: application/json'
+	        	);
 	
-	        $url = "https://hooks.slack.com/services/".$conf['SLACK'];
-	        $ch = curl_init();
-	        $headers = array(
-	            'Accept: application/json',
-	            'Content-Type: application/json'
-	        );
+	        	$dt = '{"text":'.json_encode($msg).'}';
 	
-	        $dt = '{"text":'.json_encode($msg).'}';
+	        	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	        	curl_setopt($ch, CURLOPT_VERBOSE, 0);
+	        	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+	        	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+	        	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	        	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+	        	curl_setopt($ch, CURLOPT_POSTFIELDS, $dt);
+	        	curl_setopt($ch, CURLOPT_URL, $url);
+	        	$result = curl_exec($ch);
+	        	$ch_error = curl_error($ch);
 	
-	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-	        curl_setopt($ch, CURLOPT_VERBOSE, 0);
-	        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-	        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-	        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-	        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
-	        curl_setopt($ch, CURLOPT_POSTFIELDS, $dt);
-	        curl_setopt($ch, CURLOPT_URL, $url);
-	        $result = curl_exec($ch);
-	        $ch_error = curl_error($ch);
-	
-	        if ($ch_error) {
-	            echo "cURL Error: $ch_error";
-	        }
-	        curl_close($ch);
-	
+	        	if ($ch_error) {
+	        	    echo "cURL Error: $ch_error";
+	        	}
+	        	curl_close($ch);
+			}
 	}
 
 
 }
 
 function CurlJira($request) {
-             
+	
 	global $conf; 
 	$url = "https://doorbot.atlassian.net/".$request;
 	$ch = curl_init();
@@ -275,7 +285,7 @@ function CurlJira($request) {
 	    'Content-Type: application/json'
 	);
 	 
-	 
+	
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_VERBOSE, 0);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
@@ -295,9 +305,9 @@ function CurlJira($request) {
 	curl_close($ch);
 
 }
- 
+
 function CurlGitHub($pull_request) {
-         
+	
 	global $conf;     
 	$ch = curl_init();
 	$headers = array(
@@ -306,7 +316,7 @@ function CurlGitHub($pull_request) {
 	    'User-Agent: ReleaseBot',
 	    'Authorization: token '.$conf['GITHUB']
 	);
- 
+
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_VERBOSE, 0);
 	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
