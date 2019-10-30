@@ -42,15 +42,22 @@ foreach ($Releases->issues as $r) {
 	$msg.= "*".$r->fields->summary."* ";
 	$msg.= "https://doorbot.atlassian.net/browse/".$r->key;
 	
-	if (count($r->fields->customfield_12901) > 0) {
-		$msg.= " `HOTFIX`";
-	}
+	//if (count($r->fields->customfield_12901) > 0) {
+	//	$msg.= " `HOTFIX`";
+	//}
 
+	if (isset($r->fields->customfield_customfield_13757)) { //management approval
+		if($r->fields->customfield_customfield_13757->value != "Approved") {
+			$msg .="\nManagement approval missing.";
+			$squeakyClean = false;
+		}
+	}
 
 	if (count($r->fields->issuelinks)>0) {
 		foreach ($r->fields->issuelinks as $blocker) {
-			if ($blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production"))) {
+			if (isset($blocker->type->inward) && $blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production"))) {
 				$msg .= "\n\t\tBlocked By: https://doorbot.atlassian.net/browse/".$blocker->inwardIssue->key." `".$blocker->inwardIssue->fields->status->name."`";
+				$squeakyClean = false;
 			}
 		}
 	}
@@ -180,7 +187,7 @@ foreach ($Releases->issues as $r) {
 				$msg.= " \n\t\t`[".$i->key."]` Not in RELEASABLE|RESOLVED|DONE|CLOSED status";
 				$squeakyClean=false;
 			}
-
+/*
 			$request = "rest/dev-status/1.0/issue/detail?issueId=".$i->id."&applicationType=github&dataType=repository";
 			$Json = Json_decode(CurlJira($request));
 
@@ -195,20 +202,22 @@ foreach ($Releases->issues as $r) {
 			$request = "rest/dev-status/1.0/issue/detail?issueId=".$i->id."&applicationType=github&dataType=pullrequest";
 			$Json = Json_decode(CurlJira($request));
 
-			$jprs = $Json->detail[0]->pullRequests;
-			if(count($jprs) > 0) {
-				foreach ($jprs as $jpr) {
-					//$msg.= "\n\t\t".$jpr->url;
-        	        		$url = str_ireplace("https://github.com/","https://api.github.com/repos/",str_ireplace("pull","pulls",$jpr->url))."/commits";
-        	        		$Json = CurlGitHub($url);
-        	        		foreach ($Json as $c) {
-        	        		        $JiraSmartCommits[] = substr($c->sha,0,7);
-						//$msg.= " `".substr($c->sha,0,7)."`";
-        	        		}
+			if(count($Json->detail)>0) {
+				$jprs = $Json->detail[0]->pullRequests;
+				if(count($jprs) > 0) {
+					foreach ($jprs as $jpr) {
+						//$msg.= "\n\t\t".$jpr->url;
+        		        		$url = str_ireplace("https://github.com/","https://api.github.com/repos/",str_ireplace("pull","pulls",$jpr->url))."/commits";
+        		        		$Json = CurlGitHub($url);
+        		        		foreach ($Json as $c) {
+        		        		        $JiraSmartCommits[] = substr($c->sha,0,7);
+							//$msg.= " `".substr($c->sha,0,7)."`";
+        		        		}
 
+					}	
 				}	
-			}	
-		
+			}
+*/
 		}
 	}
 
@@ -220,7 +229,7 @@ foreach ($Releases->issues as $r) {
 	//		$msg.= "`".$c."` ";
 	//	}
 	//}
-
+/*
 	$diff = array_diff($PRCommits,$JiraSmartCommits);
 	if (count($diff)> 0) {
 		$squeakyClean=false;
@@ -230,10 +239,39 @@ foreach ($Releases->issues as $r) {
 		}
 	}
 
-
+*/
 
 	if($msg!="" && $squeakyClean) {
 		$msg.="\t:white_check_mark:";
+		//transition
+		$json = '{"transition": { "id": "391" }}';
+		$json = '{ "update": { "comment": [ { "add": { "body": "ReleaseBot Approved" } } ] }, "transition": { "id": "391" } }';
+
+    	$url = "https://doorbot.atlassian.net/rest/api/2/issue/".$r->key."/transitions";
+    	$ch = curl_init();
+    	$headers = array(
+    	    'Accept: application/json',
+    	    'Content-Type: application/json'
+    	);
+
+
+    	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    	curl_setopt($ch, CURLOPT_VERBOSE, 0);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+    	curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_USERPWD, $conf['JIRA']);
+    	$result = curl_exec($ch);
+		echo $result;
+    	$ch_error = curl_error($ch);
+
+    	if ($ch_error) {
+    	    echo "cURL Error: $ch_error";
+    	}
+    	curl_close($ch);
 	}
 
 	if ($msg!="") {
@@ -293,7 +331,7 @@ function CurlJira($request) {
 	    'Accept: application/json',
 	    'Content-Type: application/json'
 	);
-	 
+	
 	
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_VERBOSE, 0);
@@ -305,7 +343,6 @@ function CurlJira($request) {
 	curl_setopt($ch, CURLOPT_USERPWD, $conf['JIRA']);
 	$result = curl_exec($ch);
 	$ch_error = curl_error($ch);
-	 
 	if ($ch_error) {
 	    echo "cURL Error: $ch_error";
 	} else {
