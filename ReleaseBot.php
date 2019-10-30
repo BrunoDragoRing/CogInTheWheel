@@ -20,6 +20,7 @@
 ini_set('memory_limit', '1024M');
 
 include "conf.php";
+include "whitelist.php";
 
 $jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
 
@@ -84,7 +85,16 @@ foreach ($Releases->issues as $r) {
 		$squeakyClean=false;
 		//break;
 	}
+
+	$whitelisted = false;
+
 	foreach ($prs[0] as $pr) {
+		foreach ($whitelist as $repo) {
+			if (stristr($pr, $repo) !== FALSE) {
+				$whitelisted = true;
+				
+			}
+		}
 		$thisPRCommits = array();
 		
 		//$msg.= "\n\n\t*Pull Request:*\t".$pr;
@@ -111,12 +121,15 @@ foreach ($Releases->issues as $r) {
 				//echo "\t".$hash;
 				if (in_array($hash,$displayHashes)) {	
 					$prHash = $hash;
+				} else {
+					$prHash = "";
 				}
 			}
 		}
 
-		if (is_null($prHash)) {
+		if ($prHash=="") {
 			$msg .="\n\t\t".$pr."` last Commit is not in the hash list provided in the release ticket`";
+				$squeakyClean=false;
 		} else {
 			if ($prHash && end($thisPRCommits) != $prHash) {
 				$msg .="\n\t\t".$pr."` last Commit is not ".$prHash."`";
@@ -153,7 +166,7 @@ foreach ($Releases->issues as $r) {
 	//$msg.= "\n\n\t*Security Tasks:*";
 
 	$securitySubtasks=0;
-	if (count($r->fields->subtasks) > 0) {
+	if (count($r->fields->subtasks) > 0 && !$whitelisted) {
 		foreach ($r->fields->subtasks as $subtask) {
 			if ($subtask->fields->status->name != "Closed") {		
 				$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
@@ -165,7 +178,7 @@ foreach ($Releases->issues as $r) {
 			
 		}
 	}
-	if ($securitySubtasks < 1) {
+	if ($securitySubtasks < 1 && !$whitelisted) {
 		$msg.= "\n\t\t`No security tasks found.`";
 		$squeakyClean=false;
 	}
