@@ -290,7 +290,7 @@ foreach ($Releases->issues as $r) {
 	if ($msg!="") {
 			$slack = false;
 			$stored = false;
-			$filename = "/tmp/".$r->key;
+			$filename = "/tmp/".$r->key.".rb";
 			if(is_file($filename)){
 				$handle = fopen($filename, "r");
 				$stored = fread($handle, filesize($filename));
@@ -410,7 +410,7 @@ function CurlGitHub($pull_request) {
 	
 
 	$ch_error = curl_error($ch);
-	 
+
 	if ($ch_error) {
 	    echo "cURL Error: $ch_error";
 	} else {
