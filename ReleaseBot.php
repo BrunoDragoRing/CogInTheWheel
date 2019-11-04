@@ -56,7 +56,7 @@ foreach ($Releases->issues as $r) {
 
 	if (count($r->fields->issuelinks)>0) {
 		foreach ($r->fields->issuelinks as $blocker) {
-			if (isset($blocker->type->inward) && $blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production"))) {
+			if (isset($blocker->type->inward) && $blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production", "Done", "Resolved"))) {
 				$msg .= "\n\t\tBlocked By: https://doorbot.atlassian.net/browse/".$blocker->inwardIssue->key." `".$blocker->inwardIssue->fields->status->name."`";
 				$squeakyClean = false;
 			}
