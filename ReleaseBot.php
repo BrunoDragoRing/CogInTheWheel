@@ -23,7 +23,7 @@ include "conf.php";
 include "whitelist.php";
 
 $jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
-
+$jql = "issuetype = Release AND status = 'Release Approval Needed'  and project not in ('Firmware - F5', 'Always Connected', 'Firmware - Chime', 'Firmware - LPD', FWRMS)ORDER BY created ASC";
 if($argc > 1) {
 	$jql = "id=".$argv[1];
 }
