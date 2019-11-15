@@ -7,6 +7,7 @@ $whitelist = array(
 "device-groups-service",
 "ding-validator",
 "firmware-release-mgmt",
+"iperf",
 "integrations-services-go",
 "motion_verification_and_stop_service",
 "notification-service-go",
