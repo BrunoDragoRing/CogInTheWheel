@@ -20,6 +20,7 @@ $whitelist = array(
 "snapshots-service",
 "status-report-reader",
 "status-reports-low-battery-notifier",
+"status-reports-capabilities-consumer",
 "status-reports-service"
 );
 ?>
