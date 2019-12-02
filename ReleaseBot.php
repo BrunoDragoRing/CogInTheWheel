@@ -41,7 +41,7 @@ foreach ($Releases->issues as $r) {
 	$commitMsgs=array();
 	$squeakyClean=true;
 	$msg.= "*".$r->fields->summary."* ";
-	$msg.= "https://doorbot.atlassian.net/browse/".$r->key;
+	$msg.= "https://jira.atl.ring.com/browse/".$r->key;
 	
 	//if (count($r->fields->customfield_12901) > 0) {
 	//	$msg.= " `HOTFIX`";
@@ -57,7 +57,7 @@ foreach ($Releases->issues as $r) {
 	if (count($r->fields->issuelinks)>0) {
 		foreach ($r->fields->issuelinks as $blocker) {
 			if (isset($blocker->type->inward) && $blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production", "Done", "Resolved"))) {
-				$msg .= "\n\t\tBlocked By: https://doorbot.atlassian.net/browse/".$blocker->inwardIssue->key." `".$blocker->inwardIssue->fields->status->name."`";
+				$msg .= "\n\t\tBlocked By: https://jira.atl.ring.com/browse/".$blocker->inwardIssue->key." `".$blocker->inwardIssue->fields->status->name."`";
 				$squeakyClean = false;
 			}
 		}
@@ -260,7 +260,7 @@ foreach ($Releases->issues as $r) {
 		$json = '{"transition": { "id": "391" }}';
 		$json = '{ "update": { "comment": [ { "add": { "body": "ReleaseBot Approved" } } ] }, "transition": { "id": "391" } }';
 
-    	$url = "https://doorbot.atlassian.net/rest/api/2/issue/".$r->key."/transitions";
+    	$url = "https://jira.atl.ring.com/rest/api/2/issue/".$r->key."/transitions";
     	$ch = curl_init();
     	$headers = array(
     	    'Accept: application/json',
@@ -338,7 +338,7 @@ foreach ($Releases->issues as $r) {
 function CurlJira($request) {
 	
 	global $conf; 
-	$url = "https://doorbot.atlassian.net/".$request;
+	$url = "https://jira.atl.ring.com/".$request;
 	$ch = curl_init();
 	$headers = array(
 	    'Accept: application/json',
