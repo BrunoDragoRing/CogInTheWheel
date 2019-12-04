@@ -1,7 +1,6 @@
 <?php
 $whitelist = array(
 "admin-panel",
-"clients-api",
 "cvcore",
 "cvcore-message-filtering",
 "device-groups-service",
@@ -23,4 +22,5 @@ $whitelist = array(
 "status-reports-capabilities-consumer",
 "status-reports-service"
 );
+//"clients-api",
 ?>
