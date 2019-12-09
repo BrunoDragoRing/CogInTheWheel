@@ -47,11 +47,9 @@ foreach ($Releases->issues as $r) {
 	//	$msg.= " `HOTFIX`";
 	//}
 
-	if (isset($r->fields->customfield_customfield_13757)) { //management approval
-		if($r->fields->customfield_customfield_13757->value != "Approved") {
-			$msg .="\nManagement approval missing.";
-			$squeakyClean = false;
-		}
+	if (!isset($r->fields->customfield_customfield_13757) || $r->fields->customfield_customfield_13757->value != "Approved") {
+		$msg .="\nManagement approval missing.";
+		$squeakyClean = false;
 	}
 
 	if (count($r->fields->issuelinks)>0) {
@@ -337,14 +335,13 @@ foreach ($Releases->issues as $r) {
 
 function CurlJira($request) {
 	
-	global $conf; 
+	global $conf;
 	$url = "https://jira.atl.ring.com/".$request;
 	$ch = curl_init();
 	$headers = array(
 	    'Accept: application/json',
 	    'Content-Type: application/json'
 	);
-	
 	
 	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 	curl_setopt($ch, CURLOPT_VERBOSE, 0);
@@ -362,7 +359,6 @@ function CurlJira($request) {
 	    return $result;
 	}
 	curl_close($ch);
-
 }
 
 function CurlGitHub($pull_request) {
