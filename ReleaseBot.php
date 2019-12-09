@@ -48,7 +48,7 @@ foreach ($Releases->issues as $r) {
 	//}
 
 	if (!isset($r->fields->customfield_customfield_13757) || $r->fields->customfield_customfield_13757->value != "Approved") {
-		$msg .="\nManagement approval missing.";
+		$msg .="\n`Management approval missing.`";
 		$squeakyClean = false;
 	}
 
