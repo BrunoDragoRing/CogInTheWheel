@@ -8,6 +8,7 @@ $whitelist = array(
 "recordings-manager",
 "rms-transcoder",
 "snapshots-service",
+"packetloss-service",
 "stark",
 "stark-reference-service",
 "stark-sns-event-consumer"
