@@ -46,8 +46,7 @@ foreach ($Releases->issues as $r) {
 	//if (count($r->fields->customfield_12901) > 0) {
 	//	$msg.= " `HOTFIX`";
 	//}
-
-	if (!isset($r->fields->customfield_customfield_13757) || $r->fields->customfield_customfield_13757->value != "Approved") {
+	if (!isset($r->fields->customfield_13757) || $r->fields->customfield_13757->value != "Approved") {
 		$msg .="\n`Management approval missing.`";
 		$squeakyClean = false;
 	}
