@@ -5,7 +5,6 @@ $whitelist = array(
 "integrations-services-go",
 "molfar",
 "news-aggregator",
-"packetloss-service",
 "recordings-manager",
 "rms-transcoder",
 "snapshots-service",
