@@ -1,5 +1,6 @@
 <?php
 $whitelist = array(
+"cvcore",
 "ding-validator",
 "eligibility-service",
 "integrations-services-go",
