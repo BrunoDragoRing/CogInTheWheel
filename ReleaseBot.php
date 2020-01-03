@@ -33,7 +33,6 @@ $request = "rest/api/2/search?jql=".urlencode($jql);
 
 $Releases = Json_decode(CurlJira($request));
 
-
 foreach ($Releases->issues as $r) {
 	$msg = "";
 	$JiraSmartCommits=array();
@@ -163,14 +162,42 @@ foreach ($Releases->issues as $r) {
 	//$msg.= "\n\n\t*Security Tasks:*";
 
 	$securitySubtasks=0;
-	if (count($r->fields->subtasks) > 0 && !$whitelisted) {
+	if (count($r->fields->subtasks) > 0) {
 		foreach ($r->fields->subtasks as $subtask) {
-			if ($subtask->fields->status->name != "Closed") {		
-				$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
-				$squeakyClean=false;
-			}
 			if (trim(substr($subtask->fields->summary,0,22)) == "Get Security Sign Off") {
 				$securitySubtasks++;
+				if ($subtask->fields->status->name != "Closed") {	
+					if (!$whitelisted) {
+						$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
+						$squeakyClean=false;
+					} else {
+						$json = '{"transition": { "id": "11" }}';
+						$json = '{ "update": { "comment": [ { "add": { "body": "ReleaseBot Closed" } } ] }, "transition": { "id": "11" } }';
+				
+				    	$url = "https://jira.atl.ring.com/rest/api/2/issue/".$subtask->key."/transitions";
+				    	$ch = curl_init();
+				    	$headers = array(
+				    	    'Accept: application/json',
+				    	    'Content-Type: application/json'
+				    	);
+				    	curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+				    	curl_setopt($ch, CURLOPT_VERBOSE, 0);
+				    	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+				    	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+				    	curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+				    	curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
+				    	curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+						curl_setopt($ch, CURLOPT_URL, $url);
+						curl_setopt($ch, CURLOPT_USERPWD, $conf['JIRA']);
+				    	$result = curl_exec($ch);
+				    	$ch_error = curl_error($ch);
+				
+				    	if ($ch_error) {
+				    	    echo "cURL Error: $ch_error";
+				    	}
+				    	curl_close($ch);
+					}
+				}
 			}
 			
 		}
@@ -179,6 +206,10 @@ foreach ($Releases->issues as $r) {
 		$msg.= "\n\t\t`No security tasks found.`";
 		$squeakyClean=false;
 	}
+
+
+
+
 	//$msg.= "\n\n\t*Tickets:*";
 	
 	$jql = "project=".$r->fields->project->key." and fixVersion=\"".$fixVersion."\" and id !=".$r->id;
