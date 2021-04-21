@@ -20,7 +20,9 @@
 ini_set('memory_limit', '1024M');
 
 include "conf.php";
-include "whitelist.php";
+//include "whitelist.php";
+
+$whitelist=array();
 
 $jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
 $jql = "issuetype = Release AND status = 'Release Approval Needed'  and project not in ('Firmware - F5', 'Always Connected', 'Firmware - Chime', 'Firmware - LPD') ORDER BY created ASC";
@@ -29,15 +31,16 @@ if($argc > 1) {
 }
 $request = "rest/api/2/search?jql=".urlencode($jql);
 
-
-
 $Releases = Json_decode(CurlJira($request));
+
 
 foreach ($Releases->issues as $r) {
 	$msg = "";
 	$JiraSmartCommits=array();
 	$PRCommits=array();
 	$commitMsgs=array();
+	$mcmapproved = false;
+	$hasmcm=false;
 	$squeakyClean=true;
 	$msg.= "*".$r->fields->summary."* ";
 	$msg.= "https://jira.atl.ring.com/browse/".$r->key;
@@ -45,7 +48,21 @@ foreach ($Releases->issues as $r) {
 	//if (count($r->fields->customfield_12901) > 0) {
 	//	$msg.= " `HOTFIX`";
 	//}
-	if (!isset($r->fields->customfield_13757) || $r->fields->customfield_13757->value != "Approved") {
+
+	//customfield_16400
+
+	if (isset($r->fields->customfield_16400) && $r->fields->customfield_16400 != "None") {
+		$hasmcm=true;
+		$mcmid = trim($r->fields->customfield_16400);
+		if (!file_exists("./mcm/".$mcmid)) {
+			$msg .="\n`MCM not approved`";
+			$squeakyClean = false;
+		} else {
+			$mcmapproved = true;
+		}
+	}
+
+	if ((!$mcmapproved) && (!isset($r->fields->customfield_13757) || $r->fields->customfield_13757->value != "Approved")) {
 		$msg .="\n`Management approval missing.`";
 		$squeakyClean = false;
 	}
@@ -122,7 +139,7 @@ foreach ($Releases->issues as $r) {
 				}
 			}
 		}
-
+/*
 		if ($prHash=="") {
 			$msg .="\n\t\t".$pr."` last Commit is not in the hash list provided in the release ticket`";
 				$squeakyClean=false;
@@ -134,7 +151,7 @@ foreach ($Releases->issues as $r) {
 		}
 		$PRCommits = array_merge($PRCommits, $thisPRCommits); 
 
-
+*/
 		$Json = CurlGitHub($url."/reviews");
 		if (is_array($Json) && count($Json)>0) {
 			if (count($Json) < 2) {
@@ -167,10 +184,13 @@ foreach ($Releases->issues as $r) {
 			if (trim(substr($subtask->fields->summary,0,22)) == "Get Security Sign Off") {
 				$securitySubtasks++;
 				if ($subtask->fields->status->name != "Closed") {	
-					if (!$whitelisted) {
+					var_dump($whitelisted);
+					var_dump($mcmapproved);
+					if ($whitelisted === false && $mcmapproved === false) {
 						$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
 						$squeakyClean=false;
 					} else {
+						print ">>>>>>>>>";
 						$json = '{"transition": { "id": "11" }}';
 						$json = '{ "update": { "comment": [ { "add": { "body": "ReleaseBot Closed" } } ] }, "transition": { "id": "11" } }';
 				
@@ -202,7 +222,7 @@ foreach ($Releases->issues as $r) {
 			
 		}
 	}
-	if ($securitySubtasks < 1 && !$whitelisted) {
+	if ($securitySubtasks < 1 && !$whitelisted && !$mcmapproved) {
 		$msg.= "\n\t\t`No security tasks found.`";
 		$squeakyClean=false;
 	}
