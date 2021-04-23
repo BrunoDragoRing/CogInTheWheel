@@ -23,16 +23,14 @@ include "conf.php";
 //include "whitelist.php";
 
 $whitelist=array();
-
 $jql = "assignee = release AND issuetype = Release AND status = 'Release Approval Needed' ORDER BY created ASC";
-$jql = "issuetype = Release AND status = 'Release Approval Needed'  and project not in ('Firmware - F5', 'Always Connected', 'Firmware - Chime', 'Firmware - LPD') ORDER BY created ASC";
+$jql = "issuetype = Release AND status = 'Release Approval Needed'  and project not in ('Firmware - F5', 'Always Connected', 'Firmware - LPD') ORDER BY created ASC";
 if($argc > 1) {
 	$jql = "id=".$argv[1];
 }
 $request = "rest/api/2/search?jql=".urlencode($jql);
 
 $Releases = Json_decode(CurlJira($request));
-
 
 foreach ($Releases->issues as $r) {
 	$msg = "";
@@ -67,6 +65,35 @@ foreach ($Releases->issues as $r) {
 		$squeakyClean = false;
 	}
 
+	if ($mcmapproved &&  $r->fields->customfield_13757->value != "Approved") {
+		$json = '{ "fields": { "customfield_13757": {"self":"https://jira.atl.ring.com/rest/api/2/customFieldOption/12630","value":"Approved","disabled":false} } }';
+		//$json = '{ "fields": { "customfield_13757": {"value":12630} }';
+		$url = "https://jira.atl.ring.com/rest/api/2/issue/".$r->key;
+		$ch = curl_init();
+		$headers = array(
+		    'Accept: application/json',
+		    'Content-Type: application/json'
+		);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_VERBOSE, 0);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+		curl_setopt($ch, CURLOPT_POSTFIELDS, $json);
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_USERPWD, $conf['JIRA']);
+		$result = curl_exec($ch);
+		$ch_error = curl_error($ch);
+		if ($ch_error) {
+		    echo "cURL Error: $ch_error";
+		}
+		curl_close($ch);
+}
+
+
+
+
 	if (count($r->fields->issuelinks)>0) {
 		foreach ($r->fields->issuelinks as $blocker) {
 			if (isset($blocker->type->inward) && $blocker->type->inward == "is blocked by" && isset($blocker->inwardIssue) && count($blocker->inwardIssue) > 0 && !in_array($blocker->inwardIssue->fields->status->name, array("Closed","In Production", "Done", "Resolved"))) {
@@ -100,7 +127,7 @@ foreach ($Releases->issues as $r) {
 	}
 
 	$whitelisted = false;
-
+/*
 	foreach ($prs[0] as $pr) {
 		foreach ($whitelist as $repo) {
 			if (stristr($pr, $repo) !== FALSE) {
@@ -139,7 +166,7 @@ foreach ($Releases->issues as $r) {
 				}
 			}
 		}
-/*
+
 		if ($prHash=="") {
 			$msg .="\n\t\t".$pr."` last Commit is not in the hash list provided in the release ticket`";
 				$squeakyClean=false;
@@ -151,7 +178,7 @@ foreach ($Releases->issues as $r) {
 		}
 		$PRCommits = array_merge($PRCommits, $thisPRCommits); 
 
-*/
+
 		$Json = CurlGitHub($url."/reviews");
 		if (is_array($Json) && count($Json)>0) {
 			if (count($Json) < 2) {
@@ -167,6 +194,7 @@ foreach ($Releases->issues as $r) {
 
 	}
 
+*/
 
 	$fixVersion = $r->fields->fixVersions[0]->name?$r->fields->fixVersions[0]->name:null;
 	if ($fixVersion === null) { 
@@ -184,13 +212,10 @@ foreach ($Releases->issues as $r) {
 			if (trim(substr($subtask->fields->summary,0,22)) == "Get Security Sign Off") {
 				$securitySubtasks++;
 				if ($subtask->fields->status->name != "Closed") {	
-					var_dump($whitelisted);
-					var_dump($mcmapproved);
 					if ($whitelisted === false && $mcmapproved === false) {
 						$msg.= "\n\t\t[".$subtask->key."] ".$subtask->fields->summary." - `".$subtask->fields->status->name."`";
 						$squeakyClean=false;
 					} else {
-						print ">>>>>>>>>";
 						$json = '{"transition": { "id": "11" }}';
 						$json = '{ "update": { "comment": [ { "add": { "body": "ReleaseBot Closed" } } ] }, "transition": { "id": "11" } }';
 				
